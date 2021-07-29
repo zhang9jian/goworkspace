@@ -2,4 +2,4 @@ module github.com/iris-contrib/examples/routing/subdomains/redirect/multi-instan
 
 go 1.15
 
-require github.com/kataras/iris/v12 master
+require github.com/kataras/iris/v12   v12.0.0

@@ -1,5 +1,5 @@
-module app
+module overview
 
 go 1.15
 
-require github.com/kataras/iris/v12 master
+require github.com/kataras/iris/v12   v12.0.0
