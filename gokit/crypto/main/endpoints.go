@@ -18,9 +18,9 @@ var (
 )
 
 type CryptoAESRequest struct {
-	cryptoType string `json:"cryType"`
-	mode       string `json:"padding"`
-	data       string `json:"data"`
+	cryptoType string `json:"cryptoType"`
+	modeOp     string `json:"modeOp"`
+	originData string `json:"originData"`
 }
 
 type CryptoAESResponse struct {
@@ -29,8 +29,14 @@ type CryptoAESResponse struct {
 }
 
 func MakeCryptoEndpoints(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) {
+	return func(ctx context.Context, request interface{})  (response interface{}, err error) {
 		req := request.(CryptoAESRequest)
+		var(
+			crytoType,modeOp,originData string
+			err error
+		)
+		crytoType := req.cryptoType 
+		if strings.EqualFold(,"")
 
 	}
 }
