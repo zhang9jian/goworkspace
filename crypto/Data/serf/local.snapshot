@@ -1,0 +1,8 @@
+alive: z9jServer 127.0.0.1:8301
+event-clock: 1
+alive: z9jServer 127.0.0.1:8301
+event-clock: 2
+alive: z9jServer 127.0.0.1:8301
+event-clock: 3
+alive: z9jServer 127.0.0.1:8301
+event-clock: 4

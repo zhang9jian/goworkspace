@@ -1,0 +1,28 @@
+version: '2'
+
+services:
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=password
+    volumes:
+      - $PWD/extra/grafana_db:/var/lib/grafana grafana/grafana
+#使用命令行：consul agent -server -bootstrap -data-dir "./Data" -client=0.0.0.0 -bind=127.0.0.1  -ui
+#  consul:
+#    image: progrium/consul:latest
+#    ports:
+#      - 8400:8400
+#      - 8500:8500
+#      - 8600:53/udp
+#    hostname: z9jServer
+#    command: -server -bootstrap -ui-dir /ui
+#    command: agent -server -bootstrap -data-dir "./Data" -client=0.0.0.0 -bind=127.0.0.1  -ui
