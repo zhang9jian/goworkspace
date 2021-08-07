@@ -26,13 +26,13 @@ func NewTokenBucketLimitterWithBuildIn(bkt *rate.Limiter) endpoint.Middleware {
 }
 
 // metricMiddleware 定义监控中间件，嵌入Service
-// 新增监控指标项：requestCount和requestLatency
 type metricMiddleware struct {
 	Service
 	requestCount   metrics.Counter
 	requestLatency metrics.Histogram
 }
 
+//返回方法签名，构建监控中间件
 func Metrics(requestCount metrics.Counter, requestLatency metrics.Histogram) ServiceMiddleware {
 	return func(next Service) Service {
 		return metricMiddleware{

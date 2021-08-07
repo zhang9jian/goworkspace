@@ -21,7 +21,7 @@ var (
 func MakeHttpHandler(ctx context.Context, endpoints CryptoEndpoints, zipkinTracer *gozipkin.Tracer, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 
-	zipkinServer := zipkin.HTTPServerTrace(zipkinTracer, zipkin.Name("http-transport"))
+	zipkinServer := zipkin.HTTPServerTrace(zipkinTracer, zipkin.Name("aes-http-handle"))
 
 	options := []kithttp.ServerOption{
 		kithttp.ServerErrorLogger(logger),

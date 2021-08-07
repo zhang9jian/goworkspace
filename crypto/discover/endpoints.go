@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
+
+	"github.com/afex/hystrix-go/hystrix"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -30,7 +34,27 @@ func MakeDiscoverEndpoint(ctx context.Context, client consul.Client, logger log.
 	//使用consul连接实例（发现服务系统）、factory创建sd.Factory
 	endpointer := sd.NewEndpointer(instancer, factory, logger)
 
+	err := hystrix.Do(serviceName, func() (err error) {
+		if endpointer == nil {
+			fmt.Println("endpointer is nil, serviceName" + serviceName)
+			logger.Log("ReverseProxy failed", "query service instace error", err.Error())
+			return nil
+		}
+		fmt.Println("endpointer is not nil, serviceName" + serviceName)
+		return nil
+	}, func(err error) error {
+		fmt.Println("in error 1111" + serviceName)
+		//run执行失败，返回fallback信息
+		logger.Log("fallback error description", err.Error())
+		return errors.New("circur break")
+	})
+	if err != nil {
+		fmt.Println("in error 2222" + err.Error())
+		return nil
+	}
+
 	//创建RoundRibbon负载均衡器
+	fmt.Println("balancer created ")
 	balancer := lb.NewRoundRobin(endpointer)
 
 	//为负载均衡器增加重试功能，同时该对象为endpoint.Endpoint

@@ -11,7 +11,7 @@ import (
 	"github.com/pborman/uuid"
 )
 
-func Register(consulHost, consulPort, svcHost, svcPort, svcUri string, logger log.Logger) (registar sd.Registrar) {
+func Register(consulHost, consulPort, consulSvr, svcHost, svcPort string, logger log.Logger) (registar sd.Registrar) {
 
 	// 创建Consul客户端连接
 	var client consul.Client
@@ -39,11 +39,11 @@ func Register(consulHost, consulPort, svcHost, svcPort, svcUri string, logger lo
 
 	//设置微服务向Consul的注册信息
 	reg := api.AgentServiceRegistration{
-		ID:      svcUri + uuid.New(),
-		Name:    svcUri,
+		ID:      consulSvr + uuid.New(),
+		Name:    consulSvr,
 		Address: svcHost,
 		Port:    port,
-		Tags:    []string{svcUri},
+		Tags:    []string{consulSvr},
 		Check:   &check,
 	}
 

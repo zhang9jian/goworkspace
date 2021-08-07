@@ -5,19 +5,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/tracing/zipkin"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	gozipkin "github.com/openzipkin/zipkin-go"
 )
 
-func MakeHttpHandler(endpoint endpoint.Endpoint) http.Handler {
+func MakeHttpHandler(ctx context.Context, endpoint endpoint.Endpoint, zipkinTracer *gozipkin.Tracer, logger log.Logger) http.Handler {
+
 	r := mux.NewRouter()
+	zipkinServer := zipkin.HTTPServerTrace(zipkinTracer, zipkin.Name("dis-http-handle"))
+
+	options := []kithttp.ServerOption{
+		kithttp.ServerErrorLogger(logger),
+		kithttp.ServerErrorEncoder(kithttp.DefaultErrorEncoder),
+		zipkinServer,
+	}
 
 	r.Methods("POST").Path("/Crypto").Handler(kithttp.NewServer(
 		endpoint,
 		decodeDiscoverRequest,
 		encodeDiscoverResponse,
+		options...,
 	))
 
 	return r
@@ -37,14 +50,24 @@ type CryptoResponse struct {
 	Errmsg error  `json:"errmsg"`
 }
 
-func decodeDiscoverRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDiscoverRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	var request CryptoRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
 	}
-	fmt.Println("request.CryptoType:" + request.CryptoType)
-	data, _ := json.MarshalIndent(request, " ", "")
-	fmt.Println("request is " + string(data))
+	var logger log.Logger
+	{
+		logger = log.NewLogfmtLogger(os.Stderr)
+		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+		logger = log.With(logger, "caller", log.DefaultCaller)
+	}
+	err := CircurBreaker("AES", logger)
+	fmt.Println("In decode")
+	if err != nil {
+		fmt.Println("decode error")
+		return err, nil
+	}
+	fmt.Println("decode noerror")
 	return request, nil
 }
 

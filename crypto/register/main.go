@@ -19,35 +19,46 @@ import (
 	"golang.org/x/time/rate"
 )
 
+/*
+ ./register -consul.service Crypto
+*/
 func main() {
 	var (
-		consulHost  = flag.String("consul.host", "", "consul ip address")
-		consulPort  = flag.String("consul.port", "", "consul port")
-		serviceHost = flag.String("service.host", "", "service ip address")
-		servicePort = flag.String("service.port", "", "service port")
-		zipkinURL   = flag.String("zipkin.url", "", "Zipkin server url")
+		consulHost   = flag.String("consul.host", "127.0.0.1", "consul ip address")
+		consulPort   = flag.String("consul.port", "8500", "consul port")
+		consulSevice = flag.String("consul.service", "", "consul register server")
+		serviceHost  = flag.String("service.host", "127.0.0.1", "service ip address")
+		servicePort  = flag.String("service.port", "9000", "service port")
+		zipkinHost   = flag.String("zipkin.host", "127.0.0.1", "Zipkin server url")
+		zipkinPort   = flag.String("zipkin.url", "9411", "Zipkin server port")
 	)
 	//解析命令行
 	flag.Parse()
+	zipkinURL := fmt.Sprintf("http://%s:%s/api/v2/spans", *zipkinHost, *zipkinPort)
 
 	ctx := context.Background()
 	errChan := make(chan error)
 	//日志结构
 	var logger log.Logger
 	{
-		logger = log.NewLogfmtLogger(os.Stderr)
+
+		logger = log.NewLogfmtLogger(os.Stdout) //Stderr
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
+	logger.Log("consulPort", consulHost, "consulPort", consulPort, "consulSevice", consulSevice)
+	logger.Log("serviceHost", serviceHost, "servicePort", servicePort)
+	logger.Log("zipkinHost", zipkinHost, "zipkinPort", zipkinPort)
+	logger.Log("zipkinURL", zipkinURL)
 	//链路跟踪
 	var zipkinTracer *zipkin.Tracer
 	{
 		var (
 			err           error
-			hostPort      = "localhost:9090"
-			serviceName   = "AES-service"
-			useNoopTracer = (*zipkinURL == "")
-			reporter      = zipkinhttp.NewReporter(*zipkinURL)
+			hostPort      = *serviceHost + ":" + *servicePort
+			serviceName   = "AES-Service"
+			useNoopTracer = (zipkinURL == "")
+			reporter      = zipkinhttp.NewReporter(zipkinURL)
 		)
 		defer reporter.Close()
 		zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
@@ -59,10 +70,10 @@ func main() {
 			os.Exit(1)
 		}
 		if !useNoopTracer {
-			logger.Log("tracer", "Zipkin", "type", "Native", "URL", *zipkinURL)
+			logger.Log("tracer", "Zipkin", "type", "Native", "URL", zipkinURL)
 		}
 	}
-
+	//监控指标
 	fieldKeys := []string{"method"}
 	requestCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Namespace: "GO",
@@ -76,6 +87,7 @@ func main() {
 		Name:      "request_latency",
 		Help:      "Total duration of requests in microseconds for Crypto.",
 	}, fieldKeys)
+
 	var svc Service
 	svc = CryptoAESService{}
 	svc = LoggingMiddleware(logger)(svc)
@@ -90,7 +102,6 @@ func main() {
 
 	//健康检查端点
 	healthEndpoint := MakeHealthCheckEndpoint(svc)
-	//	healthEndpoint = kitzipkin.TraceEndpoint(zipkinTracer, "health-endpoint")(healthEndpoint)
 
 	//把算术运算Endpoint和健康检查Endpoint封装至ArithmeticEndpoints
 	endpts := CryptoEndpoints{
@@ -99,13 +110,12 @@ func main() {
 	}
 	//在transport上增加链路追踪
 	r := MakeHttpHandler(ctx, endpts, zipkinTracer, logger)
-	//registarCheckHealth := Register(*consulHost, *consulPort, *serviceHost, *servicePort, "health", logger)
-	cryptoRegistar := Register(*consulHost, *consulPort, *serviceHost, *servicePort, "AES", logger)
+
+	cryptoRegistar := Register(*consulHost, *consulPort, *consulSevice, *serviceHost, *servicePort, logger)
 
 	go func() {
-		fmt.Println("Http Server start at port:9000")
+		logger.Log("Http Server start at port", *servicePort)
 		//启动前执行注册
-		//	registarCheckHealth.Register()
 		cryptoRegistar.Register()
 		handler := r
 		errChan <- http.ListenAndServe(":"+*servicePort, handler)
@@ -118,7 +128,6 @@ func main() {
 
 	error := <-errChan
 	//服务退出取消注册
-	//	registarCheckHealth.Deregister()
 	cryptoRegistar.Deregister()
 	fmt.Println(error)
 }
