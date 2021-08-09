@@ -48,6 +48,16 @@ func MakeHttpHandler(ctx context.Context, endpoints CryptoEndpoints, zipkinTrace
 		encodeHealthCheckResponse,
 		optionsNoTracer..., //options...,
 	))
+	//test
+	/*httpRequestCounter := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Subsystem: "service",
+			Name:      "http_request_total",
+			Help:      "Total number of http_request",
+		},
+	)
+	prometheus.MustRegister(httpRequestCounter)
+	httpRequestCounter.Inc()*/
 	r.Path("/metrics").Handler(promhttp.Handler())
 
 	return r
